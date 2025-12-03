@@ -5,6 +5,7 @@ import urllib.request
 import urllib.parse
 import time
 import os
+import sys
 import requests
 import base64
 from io import BytesIO
@@ -13,6 +14,10 @@ import uuid
 import tempfile
 import socket
 import traceback
+
+# CRITICAL: Early logging to verify handler script loads correctly
+print("worker-comfyui - Handler script loaded successfully", flush=True)
+sys.stdout.flush()
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -489,8 +494,10 @@ def handler(job):
     job_id = job["id"]
 
     # Make sure that the input is valid
+    print(f"worker-comfyui - Validating input for job {job_id}", flush=True)
     validated_data, error_message = validate_input(job_input)
     if error_message:
+        print(f"worker-comfyui - Input validation failed: {error_message}", flush=True)
         return {"error": error_message}
 
     # Extract validated data
@@ -792,5 +799,13 @@ def handler(job):
 
 
 if __name__ == "__main__":
-    print("worker-comfyui - Starting handler...")
-    runpod.serverless.start({"handler": handler})
+    try:
+        print("worker-comfyui - Handler __main__ block executing...", flush=True)
+        print("worker-comfyui - Initializing RunPod serverless...", flush=True)
+        sys.stdout.flush()
+        runpod.serverless.start({"handler": handler})
+    except Exception as e:
+        print(f"worker-comfyui - FATAL ERROR starting serverless handler: {e}", flush=True)
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.exit(1)
